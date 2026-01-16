@@ -21,6 +21,7 @@ print_usage() {
     echo "  ralph --subcommand [--options]  Run in subcommand mode"
     echo ""
     echo "Default Mode Options:"
+    echo "  --init     Initialize the target directory with .ralph folder"
     echo "  --story    Create a new story file in the .ralph folder"
     echo ""
     echo "For more information, see the documentation."
@@ -144,6 +145,56 @@ state: draft
 EOF
     
     echo "Created new story file: $story_file"
+}
+
+# Initialize .ralph directory with default content
+init_ralph_dir() {
+    local target_path="$1"
+    local ralph_dir="$target_path/.ralph"
+    
+    if [ -d "$ralph_dir" ]; then
+        error_exit "Directory '$target_path' already contains a .ralph folder."
+    fi
+    
+    # Create .ralph directory
+    mkdir -p "$ralph_dir"
+    
+    # Create common.md
+    cat > "$ralph_dir/common.md" << 'EOF'
+# Common Configuration
+
+This file contains common information valid for each story.
+Content here defines the baseline for story processing.
+
+## Project Context
+
+<!-- Add project-specific context here -->
+
+## Guidelines
+
+<!-- Add processing guidelines here -->
+
+EOF
+    
+    # Create initial story.md
+    cat > "$ralph_dir/story.md" << 'EOF'
+---
+title: Your story title
+state: draft
+---
+
+## User Story
+
+
+
+## Acceptance Criteria
+
+
+EOF
+    
+    echo "Initialized .ralph folder in: $target_path"
+    echo "  Created: $ralph_dir/common.md"
+    echo "  Created: $ralph_dir/story.md"
 }
 
 # Move processed story to history
@@ -275,12 +326,20 @@ main() {
         
         local ralph_dir="$target_path/.ralph"
         
+        shift
+        
+        # Check for --init option first (before .ralph check)
+        for arg in "$@"; do
+            if [ "$arg" = "--init" ]; then
+                init_ralph_dir "$target_path"
+                exit 0
+            fi
+        done
+        
         # Check for .ralph directory
         if [ ! -d "$ralph_dir" ]; then
-            error_exit "Directory '$target_path' does not contain a .ralph folder."
+            error_exit "Directory '$target_path' does not contain a .ralph folder. Use --init to create one."
         fi
-        
-        shift
         
         # Process options
         while [ $# -gt 0 ]; do

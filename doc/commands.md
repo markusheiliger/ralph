@@ -59,5 +59,9 @@ While the purpose of the **title** field is self-explaining, the **state** field
 
   Create a new story file in the **.ralph** folder. If no story.md file exists, create a new story.md file. If exists, create a file called story-[epoch].md (epoch >> date +%s%3N). In both cases the new story file is initialized with the YAML header described in this document.
 
+- --init
+
+  Initializes the current by target directory by adding the .ralph folder including content. 
+
 ## Subcommand Mode
 

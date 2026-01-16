@@ -1,0 +1,71 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'src/**'
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Determine version
+        id: version
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            # Tagged release - extract version from tag
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            IS_PRERELEASE="false"
+            RELEASE_NAME="Release v${VERSION}"
+          else
+            # Preview release from main branch
+            VERSION="0.0.0-preview.$(date +%Y%m%d%H%M%S)"
+            IS_PRERELEASE="true"
+            RELEASE_NAME="Preview Release v${VERSION}"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "is_prerelease=$IS_PRERELEASE" >> $GITHUB_OUTPUT
+          echo "release_name=$RELEASE_NAME" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION (prerelease: $IS_PRERELEASE)"
+
+      - name: Create tarball
+        run: |
+          mkdir -p dist
+          tar -czvf dist/ralph-${{ steps.version.outputs.version }}.tar.gz -C src .
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.release_name }}
+          body: |
+            ## ${{ steps.version.outputs.release_name }}
+            
+            **Version:** ${{ steps.version.outputs.version }}
+            **Commit:** ${{ github.sha }}
+            
+            ### Installation
+            
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/main/install.sh | bash
+            ```
+            
+            For preview releases:
+            ```bash
+            curl -fsSL https://raw.githubusercontent.com/${{ github.repository }}/refs/heads/main/install.sh | bash -s -- --preview
+            ```
+          prerelease: ${{ steps.version.outputs.is_prerelease }}
+          files: |
+            dist/ralph-${{ steps.version.outputs.version }}.tar.gz
